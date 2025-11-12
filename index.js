@@ -1,40 +1,279 @@
-/* Social Post Generator for SillyTavern
-   - อ่านข้อความแชทล่าสุดโดยใช้ MutationObserver (อ่านเฉพาะข้อความที่ปรากฏใน DOM)
-   - รวมข้อความ (ตามจำนวนที่ผู้ใช้เลือก) แล้วแปลงเป็นโพสต์โดยใช้ heuristics ง่ายๆ
-   - ไม่โพสต์แทนผู้ใช้ — มีปุ่ม copy และเปิดหน้าต่างแชร์ (Twitter intent, Facebook share)
-*/
+// index.js (module) — Social Post Generator (improved selectors + debug)
+const DEBUG = true; // set false to silence verbose logs
 
-(() => {
-  // == ชื่อ element ใน SillyTavern ที่เราเฝ้าดู ==
-  // NOTE: SillyTavern DOM อาจเปลี่ยนได้ -> ถ้าไม่เจอข้อความให้ปรับ selector
-  const CHAT_SELECTOR_CANDIDATES = [
-    '.chat-messages', // hypothetical
-    '.messages',       // some themes
-    '#chat',           // fallback
-    '.ST-messages'     // another
-  ];
+function log(...args){ if(DEBUG) console.log('[SPG]', ...args); }
+function $id(id){ return document.getElementById(id); }
 
-  // == helper ==
-  function $id(id){ return document.getElementById(id); }
-  function qs(sel){ return document.querySelector(sel); }
+const toneEl = $id('spg-tone');
+const countEl = $id('spg-count');
+const draftEl = $id('spg-draft');
+const messagesEl = $id('spg-messages');
+const copyBtn = $id('spg-copy');
+const editBtn = $id('spg-edit');
+const openTweetBtn = $id('spg-open-tweet');
+const openFbBtn = $id('spg-open-fb');
+const insertHashtags = $id('spg-insert-hashtags');
+const keywordsEl = $id('spg-keywords');
+const debugEl = $id('spg-debug');
 
-  // UI elements
-  const toneEl = $id('spg-tone');
-  const countEl = $id('spg-count');
-  const draftEl = $id('spg-draft');
-  const messagesEl = $id('spg-messages');
-  const copyBtn = $id('spg-copy');
-  const editBtn = $id('spg-edit');
-  const openTweetBtn = $id('spg-open-tweet');
-  const openFbBtn = $id('spg-open-fb');
-  const insertHashtags = $id('spg-insert-hashtags');
-  const keywordsEl = $id('spg-keywords');
+let lastExtracted = [];
+let observer = null;
+let debounceTimer = null;
 
-  // state
-  let chatContainer = null;
-  let observer = null;
-  let lastExtracted = [];
-  let debounceTimer = null;
+// a broad list of selectors used by various versions/themes of SillyTavern
+const CHAT_SELECTOR_CANDIDATES = [
+  '.chat-messages',
+  '.messages',
+  '.st-messages',
+  '.chat-lines',
+  '#chat',
+  '.thread',           // generic
+  '[data-testid="chat"]',
+  '.container-messages'
+];
+
+// message node candidates used inside chat container
+const MESSAGE_NODE_SELECTORS = [
+  '.message', '.chat-line', '.bubble', '.st-message', '.line'
+];
+
+function showDebug(msg){
+  if(debugEl) debugEl.textContent = msg;
+  if(DEBUG) console.debug('[SPG-debug]', msg);
+}
+
+// find chat container by a set of common selectors, else fallback to scanning for area with many text nodes
+function findChatContainer(){
+  for(const s of CHAT_SELECTOR_CANDIDATES){
+    const el = document.querySelector(s);
+    if(el) { log('Found chat container by candidate', s); return el; }
+  }
+  // fallback: find element that contains many child text nodes and is visible
+  const divs = Array.from(document.querySelectorAll('div')).filter(d=>d.offsetParent !== null);
+  let best = null, bestScore = 0;
+  for(const d of divs){
+    const txt = (d.innerText||'').trim();
+    if(txt.length < 200) continue;
+    const lines = txt.split(/\n/).length;
+    const score = lines;
+    if(score > bestScore){
+      bestScore = score; best = d;
+    }
+  }
+  if(best) log('Fallback found container with score', bestScore);
+  return best;
+}
+
+// extract messages: try to find message nodes inside container, else split by lines
+function extractMessagesFromDom(){
+  const container = findChatContainer();
+  if(!container) {
+    showDebug('ไม่พบ chat container — ตรวจสอบ selector ของธีม SillyTavern ของคุณ');
+    return [];
+  }
+  showDebug('Chat container found');
+  let nodes = [];
+  for(const sel of MESSAGE_NODE_SELECTORS){
+    const found = Array.from(container.querySelectorAll(sel));
+    if(found.length) { nodes = found; break; }
+  }
+  // if none found, try direct children
+  if(nodes.length === 0){
+    nodes = Array.from(container.children).filter(c => (c.innerText||'').trim().length>0);
+  }
+  // map nodes -> {who, text}
+  const out = [];
+  for(const n of nodes){
+    const text = (n.innerText||'').trim();
+    if(!text) continue;
+    // attempt to extract speaker name
+    let who = 'Unknown';
+    const whoEl = n.querySelector('.who, .speaker, .name, .from') || n.querySelector('b, strong');
+    if(whoEl && whoEl.innerText) who = whoEl.innerText.trim().split('\n')[0];
+    // remove speaker prefix if present in text
+    let pureText = text;
+    const possiblePrefix = new RegExp(`^${escapeForRegex(who)}[:\\-\\s]+`);
+    try { pureText = pureText.replace(possiblePrefix, '').trim(); } catch(e){}
+    out.push({ who, text: pureText });
+  }
+
+  // collapse adjacents from same who
+  const collapsed = [];
+  for(const m of out){
+    if(!collapsed.length){ collapsed.push(m); continue; }
+    const last = collapsed[collapsed.length-1];
+    if(last.who === m.who){
+      last.text = last.text + '\n' + m.text;
+    } else collapsed.push(m);
+  }
+  return collapsed;
+}
+
+function escapeForRegex(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+
+// build draft like before but slightly improved
+function buildDraftFromMessages(msgs, tone, maxCount, keywords){
+  if(!msgs || msgs.length===0) return '';
+  const last = msgs.slice(-maxCount);
+  const snippets = last.map(m => {
+    const lines = m.text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+    let best = lines.find(l => /[!?]|[ก-ฮ]/) || lines[0] || '';
+    // if best is long, truncate
+    if(best.length>140) best = best.slice(0,137)+'...';
+    // include who if present
+    if(m.who && !/^Unknown$/i.test(m.who)) return `${m.who}: ${best}`;
+    return best;
+  });
+  let base = snippets.join(' / ');
+  if(base.length > 240) base = base.slice(0,237)+'...';
+
+  function toTone(text,t){
+    if(!text) return text;
+    switch(t){
+      case 'complain': return `อีกแล้ว... ${text} ทำไมมันต้องเป็นแบบนี้นะ`;
+      case 'funny': return `${text} ฮา ๆ 😂 #ชีวิตโรล`;
+      case 'sad': return `${text} ...ก็เป็นงี้แหละ`;
+      case 'brag': return `ชนะอีกแล้ว 😎 ${text}`;
+      default: return text;
+    }
+  }
+  const toned = toTone(base, tone);
+  let hashtags = '';
+  if(insertHashtags && insertHashtags.checked && keywords){
+    const kws = keywords.split(',').map(k=>k.trim()).filter(Boolean).slice(0,5).map(k=>'#'+k.replace(/\s+/g,''));
+    if(kws.length) hashtags = ' ' + kws.join(' ');
+  }
+  return toned + hashtags;
+}
+
+function renderMessages(msgs){
+  if(!messagesEl) return;
+  messagesEl.innerHTML = '';
+  msgs.slice(-30).reverse().forEach(m=>{
+    const div = document.createElement('div'); div.className='msg';
+    const who = document.createElement('div'); who.className='who'; who.textContent = (m.who||'Unknown').slice(0,40);
+    const txt = document.createElement('div'); txt.className='text'; txt.textContent = m.text.length>300?m.text.slice(0,300)+'...':m.text;
+    div.appendChild(who); div.appendChild(txt);
+    messagesEl.appendChild(div);
+  });
+}
+
+// update pipeline
+function updatePipeline(){
+  const msgs = extractMessagesFromDom();
+  if(!msgs.length) {
+    setDraft('');
+    renderMessages([]);
+    return;
+  }
+  // simple change detection
+  const key = msgs.map(m=>m.who+':'+m.text.slice(0,80)).join('|');
+  const lastKey = lastExtracted.map(m=>m.who+':'+m.text.slice(0,80)).join('|');
+  if(key === lastKey) { log('No change in messages'); return; }
+  lastExtracted = msgs;
+  renderMessages(msgs);
+  const tone = toneEl?.value || 'neutral';
+  const maxCount = parseInt(countEl?.value||'4',10) || 4;
+  const keywords = keywordsEl?.value || '';
+  const draft = buildDraftFromMessages(msgs, tone, maxCount, keywords);
+  setDraft(draft);
+}
+
+let userEditing = false;
+function setDraft(text){
+  if(!draftEl) return;
+  if(userEditing) return;
+  draftEl.value = text;
+}
+
+// attach mutation observer to the first valid chat container found
+function attachObserver(){
+  if(observer) observer.disconnect();
+  const container = findChatContainer();
+  if(!container){
+    showDebug('ยังไม่พบ chat container — retrying in background');
+    // retry periodically up to some times
+    let tries = 0;
+    const t = setInterval(()=>{
+      tries++;
+      const c = findChatContainer();
+      if(c || tries>12){
+        clearInterval(t);
+        if(c) startObserving(c);
+        else showDebug('ไม่พบ chat container หลังจากหลายครั้ง — โปรดเปิดแชทหรือส่ง screenshot ให้ผมดู');
+      }
+    }, 600);
+    return;
+  }
+  startObserving(container);
+}
+
+function startObserving(container){
+  showDebug('เริ่มสังเกต container');
+  observer = new MutationObserver(muts=>{
+    if(debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(()=> {
+      try{ updatePipeline(); } catch(e){ console.error('[SPG] update error', e); showDebug('Update error: '+String(e)); }
+    }, 400);
+  });
+  observer.observe(container, { childList:true, subtree:true, characterData:true });
+  // initial run
+  updatePipeline();
+}
+
+// UI actions
+copyBtn.addEventListener('click', async ()=>{
+  try{
+    await navigator.clipboard.writeText(draftEl.value || '');
+    copyBtn.textContent = 'คัดลอกแล้ว ✓';
+    setTimeout(()=> copyBtn.textContent = 'คัดลอก', 1200);
+  } catch(e){ alert('คัดลอกไม่สำเร็จ: '+String(e)); }
+});
+
+editBtn.addEventListener('click', ()=>{
+  if(!userEditing){
+    draftEl.removeAttribute('readonly'); draftEl.focus(); editBtn.textContent='บันทึก'; userEditing=true;
+  } else {
+    draftEl.setAttribute('readonly',''); editBtn.textContent='แก้ไข'; userEditing=false;
+  }
+});
+
+openTweetBtn.addEventListener('click', ()=> {
+  const text = draftEl.value || '';
+  const url = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(text);
+  window.open(url,'_blank','noopener');
+});
+
+openFbBtn.addEventListener('click', ()=> {
+  const text = draftEl.value || '';
+  const dummyUrl = 'https://example.com/roleplay';
+  const url = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(dummyUrl) + '&quote=' + encodeURIComponent(text);
+  window.open(url,'_blank','noopener');
+});
+
+[toneEl, countEl, keywordsEl, insertHashtags].forEach(el=>{
+  if(!el) return;
+  el.addEventListener('change', ()=> {
+    if(debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(updatePipeline, 200);
+  });
+});
+
+draftEl.addEventListener('input', ()=> { if(!draftEl.hasAttribute('readonly')) userEditing = true; });
+
+// init when DOM for panel loaded
+function init(){
+  log('SPG init');
+  showDebug('กำลังค้นหา chat container...');
+  attachObserver();
+  // expose debug helpers
+  window.__SPG = { updatePipeline, extractMessagesFromDom, findChatContainer, DEBUG };
+  log('SPG ready; window.__SPG available');
+}
+
+document.addEventListener('readystatechange', ()=>{
+  if(document.readyState === 'complete' || document.readyState === 'interactive') init();
+});  let debounceTimer = null;
 
   // try to find a likely chat container
   function findChatContainer() {
