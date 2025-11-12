@@ -1,9 +1,14 @@
 {
-    "name": "Social Poster",
+    "display_name": "Roleplay Post Generator",
+    "description": "สร้างโพสต์โซเชียลมีเดียจากบทสนทนาในบทบาท",
     "version": "1.0.0",
-    "author": "Your Name",
-    "description": "บอทจะสร้างโพสต์โซเชียล (เช่น บ่นลงเฟส/ทวิตเตอร์) โดยอิงจากบทสนทนาล่าสุด",
-    "js": ["index.js"],
-    "css": ["style.css"],
-    "html": ["template.html"]
+    "author": "คุณ",
+    "repo": "https://github.com/your-repo/roleplay-post-generator",
+    "tags": [
+        "social",
+        "post",
+        "roleplay",
+        "twitter",
+        "facebook"
+    ]
 }
