@@ -484,4 +484,4 @@ if (typeof module !== 'undefined' && module.exports) {
         loadSettings,
         saveSettings
     };
-                         }
+            }
