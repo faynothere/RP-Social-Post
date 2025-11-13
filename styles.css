@@ -1,5 +1,4 @@
 /* ===== RP Social Post — Button & Mini Controls ===== */
-
 #rp-post-ext__container {
   display: inline-flex;
   align-items: center;
@@ -26,15 +25,12 @@
   font-size: 12px;
 }
 
-/* mini label ข้างปุ่ม (แค่บอกคำอธิบายเล็ก ๆ) */
-
 #rp-post-ext__hint {
   font-size: 11px;
   opacity: .7;
 }
 
 /* ===== Popup Overlay ===== */
-
 #rp-post-ext__backdrop {
   position: fixed;
   inset: 0;
@@ -100,8 +96,6 @@
   overflow: hidden;
 }
 
-/* แถบด้านบนของฟีด (ปุ่มสร้างโพสต์ใหม่) */
-
 #rp-post-ext__toolbar {
   display: flex;
   justify-content: space-between;
@@ -140,8 +134,6 @@
   filter: brightness(1.1);
 }
 
-/* ฟีดโพสต์ */
-
 #rp-post-ext__feed {
   border-radius: 10px;
   background: #070b10;
@@ -151,7 +143,6 @@
   max-height: 70vh;
 }
 
-/* card แต่ละโพสต์ */
 .rp-post-ext__post {
   padding: 8px 12px;
   border-bottom: 1px solid #222;
@@ -212,15 +203,12 @@
   margin-top: 4px;
 }
 
-/* ถ้าไม่มีโพสต์ */
 #rp-post-ext__empty {
   padding: 12px;
   text-align: center;
   font-size: 12px;
   opacity: .8;
 }
-
-/* Toast เล็ก ๆ */
 
 #rp-post-ext__toast {
   position: fixed;
@@ -238,8 +226,6 @@
   pointer-events: none;
 }
 
-/* Responsive */
-
 @media (max-width: 600px) {
   #rp-post-ext__btn {
     width: 100%;
@@ -251,4 +237,4 @@
     transform: translateX(-50%);
     max-width: calc(100% - 24px);
   }
-    }
+}
