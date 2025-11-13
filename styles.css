@@ -1,119 +1,254 @@
-/* ปุ่มในแถบแชท */
-#social-poster-ext-container {
-    display: inline-flex;
-    margin: 6px 4px;
-}
-#social-poster-ext-btn {
-    padding: 4px 10px;
-    border-radius: 4px;
-    border: 1px solid var(--primary-border, #444);
-    background: var(--primary-bg, #333);
-    color: var(--primary-fg, #fff);
-    cursor: pointer;
-    font-size: 14px;
-}
-#social-poster-ext-btn:hover {
-    background: var(--primary-hover, #555);
+/* ===== RP Social Post — Button & Mini Controls ===== */
+
+#rp-post-ext__container {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  position: relative;
+  flex-wrap: wrap;
 }
 
-/* Modal Overlay (พื้นหลังมืด) */
-#social-poster-modal-overlay {
-    display: none; /* ซ่อนไว้ก่อน */
-    position: fixed;
-    inset: 0; /* ย่อมาจาก top: 0; left: 0; right: 0; bottom: 0; */
-    background: rgba(0, 0, 0, 0.7);
-    z-index: 10000;
-    justify-content: center;
-    align-items: center;
+#rp-post-ext__btn {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid #222;
+  background: #111;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-/* กล่อง Modal หลัก */
-#social-poster-modal-content {
-    background: var(--bg, #2a2a2a);
-    color: var(--text-color, #fff);
-    border-radius: 8px;
-    padding: 20px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    border: 1px solid var(--primary-border, #444);
+#rp-post-ext__btn span {
+  font-size: 12px;
 }
 
-/* ส่วนหัว Modal */
-#social-poster-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--primary-border, #444);
-    padding-bottom: 10px;
-    margin-bottom: 15px;
-}
-#social-poster-modal-header h2 {
-    margin: 0;
-    font-size: 1.2em;
-}
-#social-poster-modal-close {
-    font-size: 24px;
-    cursor: pointer;
-    line-height: 1;
-    border: none;
-    background: none;
-    color: var(--text-color, #fff);
-    padding: 0 5px;
+/* mini label ข้างปุ่ม (แค่บอกคำอธิบายเล็ก ๆ) */
+
+#rp-post-ext__hint {
+  font-size: 11px;
+  opacity: .7;
 }
 
-/* ส่วนเนื้อหา (รายการโพสต์) */
-#social-poster-list {
-    overflow-y: auto;
-    flex-grow: 1;
-    padding-right: 10px; /* กัน Scrollbar ทับเนื้อหา */
-}
-.social-poster-item {
-    background: var(--primary-bg, #333);
-    border: 1px solid var(--primary-border, #444);
-    border-radius: 6px;
-    padding: 12px;
-    margin-bottom: 10px;
-}
-.social-poster-item p {
-    margin: 0;
-    white-space: pre-wrap; /* ให้แสดงผลขึ้นบรรทัดใหม่ตามที่ AI ส่งมา */
-}
-.social-poster-item-time {
-    font-size: 0.8em;
-    opacity: 0.7;
-    margin-top: 8px;
-    text-align: right;
-}
-#social-poster-list-empty {
-    text-align: center;
-    opacity: 0.7;
-    padding: 20px;
-    font-style: italic;
+/* ===== Popup Overlay ===== */
+
+#rp-post-ext__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
 }
 
-/* ส่วนท้าย (ปุ่มสร้าง) */
-#social-poster-modal-footer {
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid var(--primary-border, #444);
-    text-align: right;
+#rp-post-ext__backdrop.rp-post-ext__open {
+  display: flex;
 }
-#social-poster-generate-btn {
-    padding: 8px 16px;
-    border-radius: 4px;
-    border: none;
-    background: var(--accent-color, #007bff);
-    color: #fff;
-    cursor: pointer;
-    font-weight: bold;
+
+#rp-post-ext__popup {
+  background: #0d1117;
+  color: #eee;
+  border-radius: 12px;
+  padding: 10px 12px;
+  width: min(720px, 100% - 24px);
+  max-height: 90vh;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .7);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
 }
-/* สไตล์ตอนกำลังโหลด */
-#social-poster-generate-btn.loading {
-    opacity: 0.7;
-    cursor: not-allowed;
-    background: var(--primary-hover, #555);
+
+#rp-post-ext__popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
 }
+
+#rp-post-ext__popup-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+#rp-post-ext__popup-subtitle {
+  font-size: 11px;
+  opacity: .8;
+}
+
+#rp-post-ext__popup-close {
+  border: none;
+  background: transparent;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+
+#rp-post-ext__popup-close:hover {
+  color: #fff;
+}
+
+#rp-post-ext__popup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+/* แถบด้านบนของฟีด (ปุ่มสร้างโพสต์ใหม่) */
+
+#rp-post-ext__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+#rp-post-ext__toolbar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#rp-post-ext__toolbar-text {
+  font-size: 11px;
+  opacity: .85;
+}
+
+#rp-post-ext__toolbar-right {
+  display: flex;
+  gap: 6px;
+}
+
+.rp-post-ext__btn-primary {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #1d9bf0;
+  background: #1d9bf0;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.rp-post-ext__btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+/* ฟีดโพสต์ */
+
+#rp-post-ext__feed {
+  border-radius: 10px;
+  background: #070b10;
+  border: 1px solid #222;
+  padding: 6px 0;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+/* card แต่ละโพสต์ */
+.rp-post-ext__post {
+  padding: 8px 12px;
+  border-bottom: 1px solid #222;
+  display: flex;
+  gap: 8px;
+}
+
+.rp-post-ext__post:last-child {
+  border-bottom: none;
+}
+
+.rp-post-ext__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1d9bf0, #a855f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.rp-post-ext__post-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.rp-post-ext__post-header {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.rp-post-ext__post-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.rp-post-ext__post-handle {
+  font-size: 11px;
+  opacity: .7;
+}
+
+.rp-post-ext__post-time {
+  font-size: 10px;
+  opacity: .65;
+  margin-left: auto;
+}
+
+.rp-post-ext__post-body {
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin-top: 4px;
+}
+
+/* ถ้าไม่มีโพสต์ */
+#rp-post-ext__empty {
+  padding: 12px;
+  text-align: center;
+  font-size: 12px;
+  opacity: .8;
+}
+
+/* Toast เล็ก ๆ */
+
+#rp-post-ext__toast {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, .85);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 11px;
+  z-index: 100000;
+  opacity: 0;
+  transition: opacity .18s ease;
+  pointer-events: none;
+}
+
+/* Responsive */
+
+@media (max-width: 600px) {
+  #rp-post-ext__btn {
+    width: 100%;
+  }
+
+  body > #rp-post-ext__container {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    max-width: calc(100% - 24px);
+  }
+    }
