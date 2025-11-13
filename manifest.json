@@ -1,6 +1,6 @@
 {
     "display_name": "Character Social Post Generator",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "author": "fayfay",
     "description": "สร้างโพสต์โซเชียลมีเดียจากบทสนทนาระหว่าง {{char}} กับ {{user}}",
     "js": "index.js",
