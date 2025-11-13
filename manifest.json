@@ -1,10 +1,10 @@
 {
-    "display_name": "Character Social Post Generator",
-    "version": "1.0.1",
-    "author": "fayfay",
-    "description": "สร้างโพสต์โซเชียลมีเดียจากบทสนทนาระหว่าง {{char}} กับ {{user}}",
-    "js": "index.js",
-    "css": "style.css",
-    "loading_order": 70,
-    "minimum_client_version": "1.10.0"
+  "display_name": "RP Social Post",
+  "version": "0.0.1",
+  "author": "fayfay",
+  "description": "สร้างโพสต์บ่น/เมาท์จากบทโรลระหว่าง {{char}} และ {{user}} เอาไปโพสต์เฟส/ทวิตได้",
+  "js": "index.js",
+  "css": "style.css",
+  "loading_order": 60,
+  "minimum_client_version": "0.0.0"
 }
