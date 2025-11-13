@@ -1,11 +1,10 @@
 {
-    "display_name": "Roleplay Post Generator",
-    "loading_order": 10,
-    "requires": [],
-    "author": "fayfay",
+    "display_name": "Character Social Post Generator",
     "version": "1.0.0",
-    "homepage": "https://github.com/faynothere/sillytavern-roleplay-post-generator",
-    "description": "สร้างโพสต์จากบทสนทนาระหว่าง {{char}} กับ {{user}} ในรูปแบบโซเชียลมีเดีย",
-    "icon": "📱",
-    "tags": ["roleplay", "social", "post", "thai"]
+    "author": "fayfay",
+    "description": "สร้างโพสต์โซเชียลมีเดียจากบทสนทนาระหว่าง {{char}} กับ {{user}}",
+    "js": "index.js",
+    "css": "style.css",
+    "loading_order": 70,
+    "minimum_client_version": "1.10.0"
 }
